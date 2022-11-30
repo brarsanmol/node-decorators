@@ -1,8 +1,23 @@
-import { RequestHandler, Application, Router, Express, Request, Response, NextFunction } from 'express';
-import { Container } from '@decorators/di';
+import {
+  RequestHandler,
+  Application,
+  Router,
+  Express,
+  Request,
+  Response,
+  NextFunction,
+} from "express";
 
-import { ExpressMeta, getMeta, ParameterType, ExpressClass, Route, ParameterConfiguration } from './meta';
-import { middlewareHandler, errorMiddlewareHandler, Type } from './middleware';
+import {
+  ExpressMeta,
+  getMeta,
+  ParameterType,
+  ExpressClass,
+  Route,
+  ParameterConfiguration,
+} from "./meta";
+import { middlewareHandler, errorMiddlewareHandler, Type } from "./middleware";
+import { container } from "tsyringe";
 
 /**
  * Attach controllers to express application
@@ -11,7 +26,9 @@ import { middlewareHandler, errorMiddlewareHandler, Type } from './middleware';
  * @param {Type[]} controllers Controllers array
  */
 export function attachControllers(app: Express | Router, controllers: Type[]) {
-  controllers.forEach((controller: Type) => registerController(app, controller, getController));
+  controllers.forEach((controller: Type) =>
+    registerController(app, controller, getController)
+  );
 
   // error middleware must be registered as the very last one
   app.use(errorMiddlewareHandler());
@@ -23,8 +40,13 @@ export function attachControllers(app: Express | Router, controllers: Type[]) {
  * @param {Express} app Express application
  * @param {any[]} controllers Controllers array
  */
-export function attachControllerInstances(app: Express | Router, controllers: object[]) {
-  controllers.forEach((controller: Type) => registerController(app, controller, (c: object) => c));
+export function attachControllerInstances(
+  app: Express | Router,
+  controllers: object[]
+) {
+  controllers.forEach((controller: Type) =>
+    registerController(app, controller, (c: object) => c)
+  );
 
   // error middleware must be registered as the very last one
   app.use(errorMiddlewareHandler());
@@ -37,7 +59,11 @@ export function attachControllerInstances(app: Express | Router, controllers: ob
  * @param {ExpressClass} Controller
  * @returns
  */
-function registerController(app: Application | Router, Controller: Type|object, _getController: (c: Type|object) => ExpressClass) {
+function registerController(
+  app: Application | Router,
+  Controller: Type | object,
+  _getController: (c: Type | object) => ExpressClass
+) {
   const controller: ExpressClass = _getController(Controller);
   const meta: ExpressMeta = getMeta(controller);
   const router: Router = Router(meta.routerOptions);
@@ -51,8 +77,9 @@ function registerController(app: Application | Router, Controller: Type|object, 
    * or execute given middleware function
    * @see getMiddleware
    */
-  const routerMiddleware: RequestHandler[] = (meta.middleware || [])
-    .map(middleware => middlewareHandler(middleware));
+  const routerMiddleware: RequestHandler[] = (meta.middleware || []).map(
+    (middleware) => middlewareHandler(middleware)
+  );
 
   /**
    * Apply router middleware
@@ -70,19 +97,22 @@ function registerController(app: Application | Router, Controller: Type|object, 
       const handler = controller[methodName].apply(controller, args);
 
       if (handler instanceof Promise) {
-          handler.catch(next);
+        handler.catch(next);
       }
 
       return handler;
     };
 
     const routesMap = routes[methodName];
-    Object.values(routesMap).forEach(route => {
-      const routeMiddleware: RequestHandler[] = (route.middleware || [])
-        .map(middleware => middlewareHandler(middleware));
+    Object.values(routesMap).forEach((route) => {
+      const routeMiddleware: RequestHandler[] = (route.middleware || []).map(
+        (middleware) => middlewareHandler(middleware)
+      );
 
       router[route.method].apply(router, [
-        route.url, ...routeMiddleware, routeHandler
+        route.url,
+        ...routeMiddleware,
+        routeHandler,
       ]);
     });
   }
@@ -102,15 +132,19 @@ function registerController(app: Application | Router, Controller: Type|object, 
  *
  * @returns {any[]}
  */
-function extractParameters(req: Request, res: Response, next: NextFunction, params: ParameterConfiguration[]): any[] {
+function extractParameters(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  params: ParameterConfiguration[]
+): any[] {
   if (!params || !params.length) {
-    return [ req, res, next ];
+    return [req, res, next];
   }
 
   const args = [];
 
   for (const { name, index, type } of params) {
-
     switch (type) {
       case ParameterType.RESPONSE:
         args[index] = res;
@@ -122,22 +156,21 @@ function extractParameters(req: Request, res: Response, next: NextFunction, para
         args[index] = next;
         break;
       case ParameterType.PARAMS:
-        args[index] = getParam(req, 'params', name);
+        args[index] = getParam(req, "params", name);
         break;
       case ParameterType.QUERY:
-        args[index] = getParam(req, 'query', name);
+        args[index] = getParam(req, "query", name);
         break;
       case ParameterType.BODY:
-        args[index] = getParam(req, 'body', name);
+        args[index] = getParam(req, "body", name);
         break;
       case ParameterType.HEADERS:
-        args[index] = getParam(req, 'headers', name);
+        args[index] = getParam(req, "headers", name);
         break;
       case ParameterType.COOKIES:
-        args[index] = getParam(req, 'cookies', name);
+        args[index] = getParam(req, "cookies", name);
         break;
     }
-
   }
 
   return args;
@@ -152,7 +185,7 @@ function extractParameters(req: Request, res: Response, next: NextFunction, para
  */
 function getController(Controller: Type): ExpressClass {
   try {
-    return Container.get(Controller);
+    return container.resolve(Controller);
   } catch {
     return new Controller();
   }

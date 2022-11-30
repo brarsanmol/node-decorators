@@ -1,5 +1,11 @@
-import { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
-import { Container, InjectionToken } from '@decorators/di';
+import {
+  Request,
+  Response,
+  NextFunction,
+  RequestHandler,
+  ErrorRequestHandler,
+} from "express";
+import { container } from "tsyringe";
 
 export interface Type extends Function {
   new (...args: any[]);
@@ -22,7 +28,12 @@ export interface Middleware {
  * @interface ErrorMiddleware
  */
 export interface ErrorMiddleware {
-  use(error: any, request: Request, response: Response, next: NextFunction): void;
+  use(
+    error: any,
+    request: Request,
+    response: Response,
+    next: NextFunction
+  ): void;
 }
 
 /**
@@ -33,7 +44,7 @@ export interface ErrorMiddleware {
  * @returns {RequestHandler}
  */
 export function middlewareHandler(middleware: Type): RequestHandler {
-  return function(req: Request, res: Response, next: NextFunction): any {
+  return function (req: Request, res: Response, next: NextFunction): any {
     try {
       return getMiddleware(middleware, [req, res, next]);
     } catch (error) {
@@ -45,7 +56,7 @@ export function middlewareHandler(middleware: Type): RequestHandler {
 /**
  * Error Middleware class registration DI token
  */
-export const ERROR_MIDDLEWARE = new InjectionToken('ERROR_MIDDLEWARE');
+export const ERROR_MIDDLEWARE = "ERROR_MIDDLEWARE";
 
 /**
  * Add error middleware to the app
@@ -53,7 +64,12 @@ export const ERROR_MIDDLEWARE = new InjectionToken('ERROR_MIDDLEWARE');
  * @returns {ErrorRequestHandler}
  */
 export function errorMiddlewareHandler(): ErrorRequestHandler {
-  return function(error: Error, req: Request, res: Response, next: NextFunction): void {
+  return function (
+    error: Error,
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void {
     try {
       return getMiddleware(ERROR_MIDDLEWARE, [error, req, res, next]);
     } catch {
@@ -68,13 +84,13 @@ export function errorMiddlewareHandler(): ErrorRequestHandler {
  * @param {InjectionToken | Type} middleware
  * @param {any[]} args
  */
-function getMiddleware(middleware: InjectionToken | Type, args: any[]) {
+function getMiddleware(middleware: string | Type, args: any[]) {
   const next: NextFunction = args[args.length - 1]; // last parameter is always the next function
   let instance;
 
   try {
     // first, trying to get instance from the container
-    instance = Container.get(middleware);
+    instance = container.resolve(middleware);
   } catch {
     try {
       // if container fails, trying to instantiate it
@@ -87,13 +103,13 @@ function getMiddleware(middleware: InjectionToken | Type, args: any[]) {
 
   // first, assuming that middleware is a class, try to use it,
   // otherwise use it as a function
-  const result = instance.use ?
-    (instance as Middleware | ErrorMiddleware).use.apply(instance, args) :
-    (instance as Type).apply(instance, args);
+  const result = instance.use
+    ? (instance as Middleware | ErrorMiddleware).use.apply(instance, args)
+    : (instance as Type).apply(instance, args);
 
   // if result of execution is a promise, add additional listener to catch error
   if (result instanceof Promise) {
-    result.catch(e => next(e));
+    result.catch((e) => next(e));
   }
 
   return result;
