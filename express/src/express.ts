@@ -155,6 +155,8 @@ function extractParameters(
       case ParameterType.NEXT:
         args[index] = next;
         break;
+      case ParameterType.LOCALS:
+        args[index] = getParam(res, "locals", name);
       case ParameterType.PARAMS:
         args[index] = getParam(req, "params", name);
         break;

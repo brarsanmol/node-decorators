@@ -1,6 +1,6 @@
-import { RouterOptions } from 'express';
+import { RouterOptions } from "express";
 
-import { Type } from './middleware';
+import { Type } from "./middleware";
 
 /**
  * All possible parameter decorator types
@@ -11,12 +11,13 @@ import { Type } from './middleware';
 export enum ParameterType {
   REQUEST,
   RESPONSE,
+  LOCALS,
   PARAMS,
   QUERY,
   BODY,
   HEADERS,
   COOKIES,
-  NEXT
+  NEXT,
 }
 
 /**
@@ -87,10 +88,10 @@ export interface ExpressClass {
 export function getMeta(target: ExpressClass): ExpressMeta {
   if (!target.__express_meta__) {
     target.__express_meta__ = {
-      url: '',
+      url: "",
       middleware: [],
       routes: {},
-      params: {}
+      params: {},
     };
   }
   return target.__express_meta__;
