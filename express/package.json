@@ -1,5 +1,5 @@
 {
-  "name": "@decorators/express",
+  "name": "@brarsanmol/express-decorators",
   "version": "2.6.1",
   "description": "node decorators - decorators for express library",
   "main": "lib/index.js",
